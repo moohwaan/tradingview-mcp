@@ -1,0 +1,168 @@
+//@version=5
+strategy("Trend Pullback Price Action Strategy v2.1", overlay=true, pyramiding=0, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.01, max_labels_count=500)
+
+groupMode = "Testing Mode"
+positionMode = input.string("Fixed qty", "Position Mode", options=["Fixed qty", "Risk-based"], group=groupMode)
+fixedQty = input.float(10000, "Fixed Qty", minval=0.01, step=1000, group=groupMode)
+
+groupTrend = "Trend Filter"
+biasTf = input.timeframe("60", "Bias Timeframe", group=groupTrend)
+emaFastLen = input.int(20, "Fast EMA", minval=1, group=groupTrend)
+emaSlowLen = input.int(50, "Slow EMA", minval=1, group=groupTrend)
+useSlopeFilter = input.bool(true, "Use EMA Slope Filter", group=groupTrend)
+slopeLookback = input.int(5, "Slope Lookback", minval=1, group=groupTrend)
+useSeparationFilter = input.bool(true, "Use EMA Separation Filter", group=groupTrend)
+minSepAtr = input.float(0.15, "Min EMA Separation (ATR)", minval=0.0, step=0.05, group=groupTrend)
+tradeDirection = input.string("Both", "Trade Direction", options=["Both", "Long only", "Short only"], group=groupTrend)
+
+groupSetup = "Setup Logic"
+pivotLeft = input.int(3, "Pivot Left", minval=1, group=groupSetup)
+pivotRight = input.int(3, "Pivot Right", minval=1, group=groupSetup)
+touchAtrMult = input.float(0.20, "Pullback Zone Buffer (ATR)", minval=0.05, step=0.05, group=groupSetup)
+bodyAtrMin = input.float(0.15, "Min Engulfing Body ATR", minval=0.01, step=0.01, group=groupSetup)
+strictConfirm = input.bool(true, "Require Strong Confirmation", group=groupSetup)
+
+groupRisk = "Risk"
+atrLen = input.int(14, "ATR Length", minval=1, group=groupRisk)
+slAtrBuffer = input.float(0.20, "SL ATR Buffer", minval=0.05, step=0.05, group=groupRisk)
+rr = input.float(2.0, "Risk Reward", minval=0.5, step=0.1, group=groupRisk)
+riskPct = input.float(1.0, "Risk % of Equity", minval=0.1, maxval=5.0, step=0.1, group=groupRisk)
+enableBE = input.bool(false, "Move Stop to Breakeven at 1R", group=groupRisk)
+
+groupCost = "Execution Costs"
+pipMultiplier = input.int(10, "Pip Size Multiplier vs Mintick", minval=1, group=groupCost)
+spreadPips = input.float(0.8, "Spread (pips)", minval=0.0, step=0.1, group=groupCost)
+slippagePips = input.float(0.2, "Slippage (pips)", minval=0.0, step=0.1, group=groupCost)
+
+groupSession = "Session"
+sessionFilter = input.session("1300-2200", "Trading Session", group=groupSession)
+useSessionFilter = input.bool(true, "Use Session Filter", group=groupSession)
+
+groupVis = "Visuals"
+showSignals = input.bool(true, "Show Signals", group=groupVis)
+showTrendEma = input.bool(true, "Show Trend EMAs", group=groupVis)
+showExecutionEma = input.bool(true, "Show Execution EMAs", group=groupVis)
+showLevels = input.bool(true, "Show Active Levels", group=groupVis)
+
+pipSize = syminfo.mintick * pipMultiplier
+costOffset = (spreadPips + slippagePips) * pipSize
+inSession = not na(time(timeframe.period, sessionFilter))
+atr = ta.atr(atrLen)
+
+htfClose = request.security(syminfo.tickerid, biasTf, close, barmerge.gaps_off, barmerge.lookahead_off)
+htfFast = request.security(syminfo.tickerid, biasTf, ta.ema(close, emaFastLen), barmerge.gaps_off, barmerge.lookahead_off)
+htfSlow = request.security(syminfo.tickerid, biasTf, ta.ema(close, emaSlowLen), barmerge.gaps_off, barmerge.lookahead_off)
+
+execFast = ta.ema(close, emaFastLen)
+execSlow = ta.ema(close, emaSlowLen)
+
+sepOk = not useSeparationFilter or math.abs(htfFast - htfSlow) >= atr * minSepAtr
+slopeUp = not useSlopeFilter or htfSlow > htfSlow[slopeLookback]
+slopeDown = not useSlopeFilter or htfSlow < htfSlow[slopeLookback]
+upTrend = htfClose > htfSlow and htfFast > htfSlow and slopeUp and sepOk
+downTrend = htfClose < htfSlow and htfFast < htfSlow and slopeDown and sepOk
+
+plot(showTrendEma ? htfFast : na, "HTF EMA 20 Proxy", color=color.new(color.green, 70))
+plot(showTrendEma ? htfSlow : na, "HTF EMA 50 Proxy", color=color.new(color.red, 70))
+plot(showExecutionEma ? execFast : na, "Exec EMA 20", color=color.new(color.green, 0))
+plot(showExecutionEma ? execSlow : na, "Exec EMA 50", color=color.new(color.red, 0))
+
+ph = ta.pivothigh(high, pivotLeft, pivotRight)
+pl = ta.pivotlow(low, pivotLeft, pivotRight)
+
+var float lastSwingHigh = na
+var float lastSwingLow = na
+
+if not na(ph)
+    lastSwingHigh := ph
+if not na(pl)
+    lastSwingLow := pl
+
+bullishEngulfing = close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+bearishEngulfing = close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+strongBullConfirm = bullishEngulfing and close > high[1]
+strongBearConfirm = bearishEngulfing and close < low[1]
+confirmLong = strictConfirm ? strongBullConfirm : bullishEngulfing
+confirmShort = strictConfirm ? strongBearConfirm : bearishEngulfing
+
+engulfingBody = math.abs(close - open)
+bodyBigEnough = engulfingBody >= atr * bodyAtrMin
+
+buyZoneLow = execSlow - atr * touchAtrMult
+buyZoneHigh = execFast + atr * touchAtrMult
+sellZoneLow = execFast - atr * touchAtrMult
+sellZoneHigh = execSlow + atr * touchAtrMult
+pullbackBuyZone = low <= buyZoneHigh and low >= buyZoneLow
+pullbackSellZone = high >= sellZoneLow and high <= sellZoneHigh
+
+structureBuyOk = na(lastSwingLow) ? false : low > lastSwingLow
+structureSellOk = na(lastSwingHigh) ? false : high < lastSwingHigh
+sessionOk = not useSessionFilter or inSession
+allowLong = tradeDirection == "Both" or tradeDirection == "Long only"
+allowShort = tradeDirection == "Both" or tradeDirection == "Short only"
+
+longSignal = allowLong and sessionOk and upTrend and pullbackBuyZone and structureBuyOk and confirmLong and bodyBigEnough
+shortSignal = allowShort and sessionOk and downTrend and pullbackSellZone and structureSellOk and confirmShort and bodyBigEnough
+
+baseLongStop = na(lastSwingLow) ? na : lastSwingLow - atr * slAtrBuffer
+baseShortStop = na(lastSwingHigh) ? na : lastSwingHigh + atr * slAtrBuffer
+longEntryPrice = close + costOffset
+shortEntryPrice = close - costOffset
+longRiskPerUnit = na(baseLongStop) ? na : longEntryPrice - baseLongStop
+shortRiskPerUnit = na(baseShortStop) ? na : baseShortStop - shortEntryPrice
+riskCash = strategy.equity * (riskPct / 100.0)
+longQtyRisk = not na(longRiskPerUnit) and longRiskPerUnit > syminfo.mintick ? riskCash / longRiskPerUnit : na
+shortQtyRisk = not na(shortRiskPerUnit) and shortRiskPerUnit > syminfo.mintick ? riskCash / shortRiskPerUnit : na
+longQty = positionMode == "Fixed qty" ? fixedQty : longQtyRisk
+shortQty = positionMode == "Fixed qty" ? fixedQty : shortQtyRisk
+
+validLong = longSignal and not na(longQty) and longQty > 0 and not na(longRiskPerUnit) and longRiskPerUnit > syminfo.mintick
+validShort = shortSignal and not na(shortQty) and shortQty > 0 and not na(shortRiskPerUnit) and shortRiskPerUnit > syminfo.mintick
+
+var float activeLongStop = na
+var float activeLongTarget = na
+var float activeShortStop = na
+var float activeShortTarget = na
+var float activeLongRisk = na
+var float activeShortRisk = na
+
+if validLong and strategy.position_size <= 0
+    activeLongStop := baseLongStop
+    activeLongRisk := longEntryPrice - activeLongStop
+    activeLongTarget := longEntryPrice + activeLongRisk * rr
+    activeShortStop := na
+    activeShortTarget := na
+    activeShortRisk := na
+    strategy.entry("Long", strategy.long, qty=longQty)
+
+if validShort and strategy.position_size >= 0
+    activeShortStop := baseShortStop
+    activeShortRisk := activeShortStop - shortEntryPrice
+    activeShortTarget := shortEntryPrice - activeShortRisk * rr
+    activeLongStop := na
+    activeLongTarget := na
+    activeLongRisk := na
+    strategy.entry("Short", strategy.short, qty=shortQty)
+
+if strategy.position_size > 0 and not na(activeLongStop) and not na(activeLongTarget)
+    if enableBE and not na(activeLongRisk) and close >= strategy.position_avg_price + activeLongRisk
+        activeLongStop := math.max(activeLongStop, strategy.position_avg_price)
+    strategy.exit("Long Exit", "Long", stop=activeLongStop, limit=activeLongTarget)
+
+if strategy.position_size < 0 and not na(activeShortStop) and not na(activeShortTarget)
+    if enableBE and not na(activeShortRisk) and close <= strategy.position_avg_price - activeShortRisk
+        activeShortStop := math.min(activeShortStop, strategy.position_avg_price)
+    strategy.exit("Short Exit", "Short", stop=activeShortStop, limit=activeShortTarget)
+
+plotshape(showSignals and validLong, title="BUY", text="BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+plotshape(showSignals and validShort, title="SELL", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+
+plot(showLevels and strategy.position_size > 0 ? strategy.position_avg_price : na, "Long Entry", color=color.new(color.green, 20), style=plot.style_linebr)
+plot(showLevels and strategy.position_size > 0 ? activeLongStop : na, "Long Stop", color=color.new(color.red, 0), style=plot.style_linebr)
+plot(showLevels and strategy.position_size > 0 ? activeLongTarget : na, "Long Target", color=color.new(color.blue, 0), style=plot.style_linebr)
+plot(showLevels and strategy.position_size < 0 ? strategy.position_avg_price : na, "Short Entry", color=color.new(color.green, 20), style=plot.style_linebr)
+plot(showLevels and strategy.position_size < 0 ? activeShortStop : na, "Short Stop", color=color.new(color.red, 0), style=plot.style_linebr)
+plot(showLevels and strategy.position_size < 0 ? activeShortTarget : na, "Short Target", color=color.new(color.blue, 0), style=plot.style_linebr)
+
+alertcondition(validLong, "Trend Pullback v2.1 BUY", "Bullish trend pullback with configurable filters")
+alertcondition(validShort, "Trend Pullback v2.1 SELL", "Bearish trend pullback with configurable filters")

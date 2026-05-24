@@ -219,6 +219,9 @@ scripts/fetch_nyse_tickers.py
 # AI Agent skills — local only, never commit
 .agents/
 
+# macOS AppleDouble metadata files
+._*
+
 # Local test scripts
 test_api.py
 test_bitget.py

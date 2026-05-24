@@ -1,0 +1,97 @@
+//@version=5
+strategy("Trend Pullback Price Action Strategy", overlay=true, pyramiding=0, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.0, max_labels_count=500)
+
+groupTrend = "Trend Filter"
+biasTf = input.timeframe("60", "Bias Timeframe", group=groupTrend)
+emaFastLen = input.int(20, "Fast EMA", minval=1, group=groupTrend)
+emaSlowLen = input.int(50, "Slow EMA", minval=1, group=groupTrend)
+
+groupSetup = "Setup Logic"
+pivotLeft = input.int(3, "Pivot Left", minval=1, group=groupSetup)
+pivotRight = input.int(3, "Pivot Right", minval=1, group=groupSetup)
+touchAtrMult = input.float(0.30, "EMA Touch ATR Buffer", minval=0.05, step=0.05, group=groupSetup)
+bodyAtrMin = input.float(0.10, "Min Engulfing Body ATR", minval=0.01, step=0.01, group=groupSetup)
+
+groupRisk = "Risk"
+atrLen = input.int(14, "ATR Length", minval=1, group=groupRisk)
+slAtrBuffer = input.float(0.20, "SL ATR Buffer", minval=0.05, step=0.05, group=groupRisk)
+rr = input.float(2.0, "Risk Reward", minval=0.5, step=0.1, group=groupRisk)
+
+groupSession = "Session"
+sessionFilter = input.session("1300-2200", "Trading Session", group=groupSession)
+useSessionFilter = input.bool(true, "Use Session Filter", group=groupSession)
+
+groupVis = "Visuals"
+showSignals = input.bool(true, "Show Signals", group=groupVis)
+showTrendEma = input.bool(true, "Show Trend EMAs", group=groupVis)
+showExecutionEma = input.bool(true, "Show Execution EMAs", group=groupVis)
+
+inSession = not na(time(timeframe.period, sessionFilter))
+atr = ta.atr(atrLen)
+
+htfClose = request.security(syminfo.tickerid, biasTf, close, barmerge.gaps_off, barmerge.lookahead_off)
+htfFast = request.security(syminfo.tickerid, biasTf, ta.ema(close, emaFastLen), barmerge.gaps_off, barmerge.lookahead_off)
+htfSlow = request.security(syminfo.tickerid, biasTf, ta.ema(close, emaSlowLen), barmerge.gaps_off, barmerge.lookahead_off)
+
+execFast = ta.ema(close, emaFastLen)
+execSlow = ta.ema(close, emaSlowLen)
+
+upTrend = htfClose > htfSlow and htfFast > htfSlow
+downTrend = htfClose < htfSlow and htfFast < htfSlow
+
+plot(showTrendEma ? htfFast : na, "HTF EMA 20 Proxy", color=color.new(color.green, 70))
+plot(showTrendEma ? htfSlow : na, "HTF EMA 50 Proxy", color=color.new(color.red, 70))
+plot(showExecutionEma ? execFast : na, "Exec EMA 20", color=color.new(color.green, 0))
+plot(showExecutionEma ? execSlow : na, "Exec EMA 50", color=color.new(color.red, 0))
+
+ph = ta.pivothigh(high, pivotLeft, pivotRight)
+pl = ta.pivotlow(low, pivotLeft, pivotRight)
+
+var float lastSwingHigh = na
+var float lastSwingLow = na
+
+if not na(ph)
+    lastSwingHigh := ph
+
+if not na(pl)
+    lastSwingLow := pl
+
+bullishEngulfing = close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+bearishEngulfing = close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+
+engulfingBody = math.abs(close - open)
+bodyBigEnough = engulfingBody >= atr * bodyAtrMin
+
+pullbackBuyZone = low <= execFast + atr * touchAtrMult or low <= execSlow + atr * touchAtrMult
+pullbackSellZone = high >= execFast - atr * touchAtrMult or high >= execSlow - atr * touchAtrMult
+
+structureBuyOk = na(lastSwingLow) ? false : low > lastSwingLow
+structureSellOk = na(lastSwingHigh) ? false : high < lastSwingHigh
+
+sessionOk = not useSessionFilter or inSession
+
+longSignal = sessionOk and upTrend and pullbackBuyZone and structureBuyOk and bullishEngulfing and bodyBigEnough
+shortSignal = sessionOk and downTrend and pullbackSellZone and structureSellOk and bearishEngulfing and bodyBigEnough
+
+longStop = na(lastSwingLow) ? na : lastSwingLow - atr * slAtrBuffer
+shortStop = na(lastSwingHigh) ? na : lastSwingHigh + atr * slAtrBuffer
+
+longRisk = na(longStop) ? na : close - longStop
+shortRisk = na(shortStop) ? na : shortStop - close
+
+validLong = longSignal and not na(longRisk) and longRisk > syminfo.mintick
+validShort = shortSignal and not na(shortRisk) and shortRisk > syminfo.mintick
+
+if validLong and strategy.position_size <= 0
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Long Exit", "Long", stop=longStop, limit=close + longRisk * rr)
+
+if validShort and strategy.position_size >= 0
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Short Exit", "Short", stop=shortStop, limit=close - shortRisk * rr)
+
+plotshape(showSignals and validLong, title="BUY", text="BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+plotshape(showSignals and validShort, title="SELL", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+
+alertcondition(validLong, "Trend Pullback BUY", "Bullish trend pullback with price action confirmation")
+alertcondition(validShort, "Trend Pullback SELL", "Bearish trend pullback with price action confirmation")

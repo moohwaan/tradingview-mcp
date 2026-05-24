@@ -1,0 +1,260 @@
+//@version=5
+strategy("CDC + SMC Workflow Strategy", overlay=true, max_labels_count=500, max_lines_count=500, initial_capital=10000, pyramiding=0, commission_type=strategy.commission.percent, commission_value=0.0)
+
+// This script follows the workflow discussed in the notes:
+// 1) Use CDC-style EMA zones from a higher timeframe as the bias filter.
+// 2) Use a lower-timeframe execution trigger with ATR-based risk management.
+// It does NOT replicate the protected SMC Signal logic.
+
+// ---------------------------
+// Inputs
+// ---------------------------
+groupBias = "CDC Bias Filter"
+biasTf = input.timeframe("60", "Bias Timeframe", group=groupBias, tooltip="Recommended default for XAUUSD M5 is H1 bias")
+priceSourceOpt = input.string("Close", "Bias Price Source", options=["Close", "HL2", "OHLC4"], group=groupBias)
+fastLen = input.int(12, "Fast EMA", minval=1, group=groupBias)
+slowLen = input.int(26, "Slow EMA", minval=1, group=groupBias)
+showZones = input.bool(true, "Show Current TF Zones", group=groupBias)
+showHtfRibbon = input.bool(true, "Show HTF Bias Ribbon", group=groupBias)
+
+groupExec = "Execution Layer"
+execMode = input.string("Confirmed", "Execution Mode", options=["Fast", "Confirmed"], group=groupExec, tooltip="Recommended default for XAUUSD M5 is Confirmed")
+confirmBars = input.int(2, "Confirmed Bars", minval=1, maxval=5, group=groupExec, tooltip="2 is a practical default for XAUUSD M5")
+useMomentum = input.bool(true, "Use Momentum Filter", group=groupExec)
+rsiLen = input.int(14, "RSI Length", minval=1, group=groupExec)
+longRsiMin = input.int(52, "Long RSI Min", minval=1, maxval=99, group=groupExec)
+shortRsiMax = input.int(48, "Short RSI Max", minval=1, maxval=99, group=groupExec)
+
+groupRisk = "Risk Management"
+atrLen = input.int(14, "ATR Length", minval=1, group=groupRisk)
+slAtrMult = input.float(2.8, "SL ATR Multiplier", minval=0.1, step=0.1, group=groupRisk, tooltip="XAUUSD M5 default is slightly wider to reduce noise stops")
+rr = input.float(2.0, "Risk:Reward", minval=0.5, step=0.1, group=groupRisk)
+enableBE = input.bool(true, "Enable Break-even", group=groupRisk)
+beTriggerR = input.float(0.5, "BE Trigger (R)", minval=0.1, step=0.1, group=groupRisk)
+enableTrail = input.bool(true, "Enable Trailing Stop", group=groupRisk)
+trailAtrMult = input.float(0.4, "Trail ATR Multiplier", minval=0.1, step=0.1, group=groupRisk)
+
+groupMulti = "Multi-TP"
+useMultiTp = input.bool(true, "Enable Multi-TP", group=groupMulti)
+tp1R = input.float(1.0, "TP1 (R)", minval=0.2, step=0.1, group=groupMulti)
+tp2R = input.float(2.0, "TP2 (R)", minval=0.2, step=0.1, group=groupMulti)
+tp3R = input.float(3.0, "TP3 (R)", minval=0.2, step=0.1, group=groupMulti)
+tp1Pct = input.float(40.0, "TP1 Qty %", minval=0, maxval=100, step=1, group=groupMulti)
+tp2Pct = input.float(35.0, "TP2 Qty %", minval=0, maxval=100, step=1, group=groupMulti)
+tp3Pct = input.float(25.0, "TP3 Qty %", minval=0, maxval=100, step=1, group=groupMulti)
+
+groupSize = "Lot Size Calculator"
+showLotCalc = input.bool(true, "Show Lot Calculator", group=groupSize)
+accountBalance = input.float(10000, "Account Balance", minval=0, step=100, group=groupSize)
+riskPct = input.float(1.0, "Risk %", minval=0.1, step=0.1, group=groupSize)
+contractSize = input.float(100, "Contract Size / Point Value", minval=0.0001, step=0.1, group=groupSize, tooltip="Use your broker's actual point/pip value basis")
+
+groupVis = "Visuals"
+showLabels = input.bool(true, "Show BUY/SELL Labels", group=groupVis)
+showLevels = input.bool(true, "Show Entry/SL/TP Lines", group=groupVis)
+showDashboard = input.bool(true, "Show Dashboard", group=groupVis)
+
+// ---------------------------
+// Helpers
+// ---------------------------
+srcFromOption(opt) =>
+    opt == "HL2" ? hl2 : opt == "OHLC4" ? ohlc4 : close
+
+src = srcFromOption(priceSourceOpt)
+
+zoneState(_src, _fast, _slow) =>
+    _fast > _slow and _src > _fast ? 2 :
+     _fast > _slow and _src < _slow ? 1 :
+     _fast > _slow ? 0 :
+     _fast < _slow and _src < _fast ? -2 :
+     _fast < _slow and _src > _slow ? -1 : 0
+
+zoneName(_state) =>
+    _state == 2 ? "Bullish" :
+     _state == 1 ? "Bull Pullback" :
+     _state == -1 ? "Bear Pullback" :
+     _state == -2 ? "Bearish" : "Neutral"
+
+zoneColor(_state) =>
+    _state == 2 ? color.new(color.green, 82) :
+     _state == 1 ? color.new(color.yellow, 82) :
+     _state == -1 ? color.new(color.aqua, 82) :
+     _state == -2 ? color.new(color.red, 82) : color.new(color.gray, 85)
+
+// ---------------------------
+// Current timeframe CDC-style zones
+// ---------------------------
+fastEma = ta.ema(src, fastLen)
+slowEma = ta.ema(src, slowLen)
+currZone = zoneState(src, fastEma, slowEma)
+
+bgcolor(showZones ? zoneColor(currZone) : na)
+plot(fastEma, "Fast EMA", color=color.new(color.green, 0))
+plot(slowEma, "Slow EMA", color=color.new(color.red, 0))
+
+// ---------------------------
+// Higher timeframe bias
+// ---------------------------
+htfSrc = request.security(syminfo.tickerid, biasTf, srcFromOption(priceSourceOpt), barmerge.gaps_off, barmerge.lookahead_off)
+htfFast = request.security(syminfo.tickerid, biasTf, ta.ema(srcFromOption(priceSourceOpt), fastLen), barmerge.gaps_off, barmerge.lookahead_off)
+htfSlow = request.security(syminfo.tickerid, biasTf, ta.ema(srcFromOption(priceSourceOpt), slowLen), barmerge.gaps_off, barmerge.lookahead_off)
+htfZone = zoneState(htfSrc, htfFast, htfSlow)
+htfBullBias = htfZone >= 1
+htfBearBias = htfZone <= -1
+
+plotchar(showHtfRibbon ? htfBullBias : na, "HTF Bull Bias", "", location.top, color.new(color.green, 0), size=size.tiny)
+plotchar(showHtfRibbon ? htfBearBias : na, "HTF Bear Bias", "", location.top, color.new(color.red, 0), size=size.tiny)
+
+// ---------------------------
+// Execution logic
+// ---------------------------
+rsi = ta.rsi(close, rsiLen)
+atr = ta.atr(atrLen)
+
+currBull = currZone == 2
+currBear = currZone == -2
+
+greenFlip = currBull and currZone[1] != 2
+redFlip = currBear and currZone[1] != -2
+
+confirmedLong = currBull and ta.barssince(currZone != 2) >= confirmBars - 1
+confirmedShort = currBear and ta.barssince(currZone != -2) >= confirmBars - 1
+
+momentumLong = not useMomentum or rsi >= longRsiMin
+momentumShort = not useMomentum or rsi <= shortRsiMax
+
+longSignal = htfBullBias and momentumLong and (execMode == "Fast" ? greenFlip : confirmedLong)
+shortSignal = htfBearBias and momentumShort and (execMode == "Fast" ? redFlip : confirmedShort)
+
+// ---------------------------
+// Orders
+// ---------------------------
+var float activeLongSL = na
+var float activeLongTP = na
+var float activeShortSL = na
+var float activeShortTP = na
+var float activeLongRisk = na
+var float activeShortRisk = na
+
+if longSignal and strategy.position_size <= 0
+    longEntry = close
+    longRisk = atr * slAtrMult
+    activeLongSL := longEntry - longRisk
+    activeLongTP := longEntry + longRisk * rr
+    activeLongRisk := longRisk
+    activeShortSL := na
+    activeShortTP := na
+    activeShortRisk := na
+    strategy.entry("Long", strategy.long)
+
+if shortSignal and strategy.position_size >= 0
+    shortEntry = close
+    shortRisk = atr * slAtrMult
+    activeShortSL := shortEntry + shortRisk
+    activeShortTP := shortEntry - shortRisk * rr
+    activeShortRisk := shortRisk
+    activeLongSL := na
+    activeLongTP := na
+    activeLongRisk := na
+    strategy.entry("Short", strategy.short)
+
+// ---------------------------
+// Dynamic exit management
+// ---------------------------
+if strategy.position_size > 0
+    avg = strategy.position_avg_price
+    baseRisk = avg - nz(activeLongSL, avg - atr * slAtrMult)
+    beReady = enableBE and close >= avg + baseRisk * beTriggerR
+    beStop = beReady ? avg : nz(activeLongSL)
+    trailStop = enableTrail ? close - atr * trailAtrMult : beStop
+    finalStop = enableTrail ? math.max(beStop, trailStop) : beStop
+    if useMultiTp
+        strategy.exit("Long TP1", "Long", qty_percent=tp1Pct, stop=finalStop, limit=avg + nz(activeLongRisk, atr * slAtrMult) * tp1R)
+        strategy.exit("Long TP2", "Long", qty_percent=tp2Pct, stop=finalStop, limit=avg + nz(activeLongRisk, atr * slAtrMult) * tp2R)
+        strategy.exit("Long TP3", "Long", qty_percent=tp3Pct, stop=finalStop, limit=avg + nz(activeLongRisk, atr * slAtrMult) * tp3R)
+    else
+        strategy.exit("Long Exit", "Long", stop=finalStop, limit=activeLongTP)
+    activeLongSL := finalStop
+
+if strategy.position_size < 0
+    avg = strategy.position_avg_price
+    baseRisk = nz(activeShortSL, avg + atr * slAtrMult) - avg
+    beReady = enableBE and close <= avg - baseRisk * beTriggerR
+    beStop = beReady ? avg : nz(activeShortSL)
+    trailStop = enableTrail ? close + atr * trailAtrMult : beStop
+    finalStop = enableTrail ? math.min(beStop, trailStop) : beStop
+    if useMultiTp
+        strategy.exit("Short TP1", "Short", qty_percent=tp1Pct, stop=finalStop, limit=avg - nz(activeShortRisk, atr * slAtrMult) * tp1R)
+        strategy.exit("Short TP2", "Short", qty_percent=tp2Pct, stop=finalStop, limit=avg - nz(activeShortRisk, atr * slAtrMult) * tp2R)
+        strategy.exit("Short TP3", "Short", qty_percent=tp3Pct, stop=finalStop, limit=avg - nz(activeShortRisk, atr * slAtrMult) * tp3R)
+    else
+        strategy.exit("Short Exit", "Short", stop=finalStop, limit=activeShortTP)
+    activeShortSL := finalStop
+
+// ---------------------------
+// Visual signals
+// ---------------------------
+plotshape(showLabels and longSignal, title="BUY", text="BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+plotshape(showLabels and shortSignal, title="SELL", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+
+longEntryPlot = strategy.position_size > 0 ? strategy.position_avg_price : na
+shortEntryPlot = strategy.position_size < 0 ? strategy.position_avg_price : na
+longSlPlot = strategy.position_size > 0 ? activeLongSL : na
+longTpPlot = strategy.position_size > 0 ? activeLongTP : na
+shortSlPlot = strategy.position_size < 0 ? activeShortSL : na
+shortTpPlot = strategy.position_size < 0 ? activeShortTP : na
+
+plot(showLevels ? longEntryPlot : na, "Long Entry", color=color.new(color.green, 20), style=plot.style_linebr)
+plot(showLevels ? longSlPlot : na, "Long SL", color=color.new(color.red, 0), style=plot.style_linebr)
+plot(showLevels ? longTpPlot : na, "Long TP", color=color.new(color.blue, 0), style=plot.style_linebr)
+plot(showLevels ? shortEntryPlot : na, "Short Entry", color=color.new(color.green, 20), style=plot.style_linebr)
+plot(showLevels ? shortSlPlot : na, "Short SL", color=color.new(color.red, 0), style=plot.style_linebr)
+plot(showLevels ? shortTpPlot : na, "Short TP", color=color.new(color.blue, 0), style=plot.style_linebr)
+
+// ---------------------------
+// Alerts
+// ---------------------------
+alertcondition(longSignal, "Long Signal", "CDC bias is bullish and execution layer triggered a BUY")
+alertcondition(shortSignal, "Short Signal", "CDC bias is bearish and execution layer triggered a SELL")
+alertcondition(htfBullBias and not htfBullBias[1], "HTF Bull Bias", "CDC higher timeframe bias turned bullish")
+alertcondition(htfBearBias and not htfBearBias[1], "HTF Bear Bias", "CDC higher timeframe bias turned bearish")
+
+// ---------------------------
+// Dashboard
+// ---------------------------
+var table dash = table.new(position.bottom_right, 2, 12, border_width=1)
+entryRef = strategy.position_size > 0 ? strategy.position_avg_price : strategy.position_size < 0 ? strategy.position_avg_price : close
+stopRef = strategy.position_size > 0 ? activeLongSL : strategy.position_size < 0 ? activeShortSL : na
+riskDistance = not na(stopRef) ? math.abs(entryRef - stopRef) : atr * slAtrMult
+capitalRisk = accountBalance * (riskPct / 100.0)
+positionUnits = riskDistance > 0 ? capitalRisk / (riskDistance * contractSize) : na
+
+if barstate.islast and showDashboard
+    table.clear(dash, 0, 0)
+    table.cell(dash, 0, 0, "CDC + SMC", text_color=color.white, bgcolor=color.rgb(35, 35, 60))
+    table.cell(dash, 1, 0, "Workflow", text_color=color.orange, bgcolor=color.rgb(35, 35, 60))
+    table.cell(dash, 0, 1, "HTF Bias")
+    table.cell(dash, 1, 1, zoneName(htfZone), text_color=htfBullBias ? color.lime : htfBearBias ? color.red : color.silver)
+    table.cell(dash, 0, 2, "Current Zone")
+    table.cell(dash, 1, 2, zoneName(currZone), text_color=currZone > 0 ? color.lime : currZone < 0 ? color.red : color.silver)
+    table.cell(dash, 0, 3, "Mode")
+    table.cell(dash, 1, 3, execMode)
+    table.cell(dash, 0, 4, "Signal")
+    table.cell(dash, 1, 4, longSignal ? "BUY" : shortSignal ? "SELL" : "WAIT", text_color=longSignal ? color.lime : shortSignal ? color.red : color.silver)
+    table.cell(dash, 0, 5, "Entry")
+    table.cell(dash, 1, 5, strategy.position_size != 0 ? str.tostring(strategy.position_avg_price, format.mintick) : "-")
+    table.cell(dash, 0, 6, "SL")
+    table.cell(dash, 1, 6, strategy.position_size > 0 ? str.tostring(activeLongSL, format.mintick) : strategy.position_size < 0 ? str.tostring(activeShortSL, format.mintick) : "-")
+    table.cell(dash, 0, 7, "TP")
+    table.cell(dash, 1, 7, strategy.position_size > 0 ? str.tostring(activeLongTP, format.mintick) : strategy.position_size < 0 ? str.tostring(activeShortTP, format.mintick) : "-")
+    table.cell(dash, 0, 8, "RSI")
+    table.cell(dash, 1, 8, str.tostring(rsi, "#.0"))
+    if showLotCalc
+        table.cell(dash, 0, 9, "Risk $")
+        table.cell(dash, 1, 9, str.tostring(capitalRisk, "#.##"))
+        table.cell(dash, 0, 10, "Units")
+        table.cell(dash, 1, 10, na(positionUnits) ? "-" : str.tostring(positionUnits, "#.####"))
+        table.cell(dash, 0, 11, "TP Mode")
+        table.cell(dash, 1, 11, useMultiTp ? "Multi" : "Single")
+else if barstate.islast
+    table.clear(dash, 0, 0)
