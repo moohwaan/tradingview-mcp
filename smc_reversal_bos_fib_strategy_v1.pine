@@ -1,0 +1,268 @@
+//@version=5
+strategy("SMC Reversal BOS Fib Strategy v1", overlay=true, pyramiding=0, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.01, max_labels_count=500, max_lines_count=500)
+
+groupMode = "Position Mode"
+positionMode = input.string("Risk-based", "Position Mode", options=["Fixed qty", "Risk-based"], group=groupMode)
+fixedQty = input.float(1.0, "Fixed Qty", minval=0.0001, step=0.1, group=groupMode)
+riskPct = input.float(1.0, "Risk % of Equity", minval=0.1, maxval=10.0, step=0.1, group=groupMode)
+tradeDirection = input.string("Both", "Trade Direction", options=["Both", "Long only", "Short only"], group=groupMode)
+
+groupStructure = "Structure"
+pivotLeft = input.int(3, "Pivot Left", minval=1, group=groupStructure)
+pivotRight = input.int(3, "Pivot Right", minval=1, group=groupStructure)
+minSwingAtr = input.float(0.5, "Min Swing Size (ATR)", minval=0.0, step=0.1, group=groupStructure)
+useCloseBreakOnly = input.bool(true, "Use Close Break Only", group=groupStructure)
+setupExpiryBars = input.int(20, "Setup Expiry Bars", minval=1, group=groupStructure)
+
+groupFib = "Fib Retest"
+fibShallowLow = input.float(0.382, "Shallow Low", minval=0.1, maxval=0.9, step=0.001, group=groupFib)
+fibShallowHigh = input.float(0.5, "Shallow High", minval=0.1, maxval=0.9, step=0.001, group=groupFib)
+fibMid = input.float(0.618, "Mid Level", minval=0.1, maxval=0.95, step=0.001, group=groupFib)
+fibDeep = input.float(0.786, "Deep Level", minval=0.1, maxval=0.99, step=0.001, group=groupFib)
+zoneBufferAtr = input.float(0.15, "Zone Buffer (ATR)", minval=0.01, step=0.01, group=groupFib)
+useTargetByRetestDepth = input.bool(false, "Use Target By Retest Depth", group=groupFib)
+
+groupConfirm = "Confirmation"
+confirmMode = input.string("Engulfing", "Confirm Mode", options=["Engulfing", "Strong Engulfing"], group=groupConfirm)
+minBodyAtr = input.float(0.15, "Min Body Size (ATR)", minval=0.01, step=0.01, group=groupConfirm)
+requireDirectionalClose = input.bool(true, "Require Directional Close", group=groupConfirm)
+
+groupRisk = "Risk"
+atrLen = input.int(14, "ATR Length", minval=1, group=groupRisk)
+slAtrBuffer = input.float(0.2, "SL ATR Buffer", minval=0.01, step=0.01, group=groupRisk)
+riskRewardPrimary = input.float(2.0, "Fixed Risk Reward", minval=0.5, step=0.1, group=groupRisk)
+enableBreakeven = input.bool(true, "Move Stop to Breakeven at 1R", group=groupRisk)
+
+groupFilters = "Filters"
+useTrendFilter = input.bool(false, "Use HTF Trend Filter", group=groupFilters)
+biasTf = input.timeframe("60", "Bias Timeframe", group=groupFilters)
+emaFastLen = input.int(20, "HTF Fast EMA", minval=1, group=groupFilters)
+emaSlowLen = input.int(50, "HTF Slow EMA", minval=1, group=groupFilters)
+useSessionFilter = input.bool(false, "Use Session Filter", group=groupFilters)
+sessionInput = input.session("1300-2200", "Trading Session", group=groupFilters)
+
+groupVisuals = "Visuals"
+showSignals = input.bool(true, "Show Setup + Entry Labels", group=groupVisuals)
+showLevels = input.bool(true, "Show Levels", group=groupVisuals)
+showTrendEma = input.bool(false, "Show HTF EMAs", group=groupVisuals)
+showDebugPlots = input.bool(false, "Show Debug Plots", group=groupVisuals)
+
+atr = ta.atr(atrLen)
+buffer = atr * zoneBufferAtr
+inSession = not na(time(timeframe.period, sessionInput))
+allowLong = tradeDirection == "Both" or tradeDirection == "Long only"
+allowShort = tradeDirection == "Both" or tradeDirection == "Short only"
+sessionOk = not useSessionFilter or inSession
+
+htfClose = request.security(syminfo.tickerid, biasTf, close, barmerge.gaps_off, barmerge.lookahead_off)
+htfFast = request.security(syminfo.tickerid, biasTf, ta.ema(close, emaFastLen), barmerge.gaps_off, barmerge.lookahead_off)
+htfSlow = request.security(syminfo.tickerid, biasTf, ta.ema(close, emaSlowLen), barmerge.gaps_off, barmerge.lookahead_off)
+trendLongOk = not useTrendFilter or (htfClose > htfSlow and htfFast > htfSlow)
+trendShortOk = not useTrendFilter or (htfClose < htfSlow and htfFast < htfSlow)
+
+plot(showTrendEma ? htfFast : na, "HTF EMA Fast", color=color.new(color.green, 65))
+plot(showTrendEma ? htfSlow : na, "HTF EMA Slow", color=color.new(color.red, 65))
+
+ph = ta.pivothigh(high, pivotLeft, pivotRight)
+pl = ta.pivotlow(low, pivotLeft, pivotRight)
+
+var float lastSwingHigh = na
+var float lastSwingLow = na
+var int lastSwingHighBar = na
+var int lastSwingLowBar = na
+
+if not na(ph)
+    pivotBar = bar_index - pivotRight
+    if na(lastSwingLow) or math.abs(ph - lastSwingLow) >= atr * minSwingAtr
+        lastSwingHigh := ph
+        lastSwingHighBar := pivotBar
+
+if not na(pl)
+    pivotBar = bar_index - pivotRight
+    if na(lastSwingHigh) or math.abs(lastSwingHigh - pl) >= atr * minSwingAtr
+        lastSwingLow := pl
+        lastSwingLowBar := pivotBar
+
+bullBreak = not na(lastSwingHigh) and (useCloseBreakOnly ? (close > lastSwingHigh and close[1] <= lastSwingHigh) : (high > lastSwingHigh and high[1] <= lastSwingHigh))
+bearBreak = not na(lastSwingLow) and (useCloseBreakOnly ? (close < lastSwingLow and close[1] >= lastSwingLow) : (low < lastSwingLow and low[1] >= lastSwingLow))
+
+bullSetupTrigger = bullBreak and not na(lastSwingLowBar) and not na(lastSwingHighBar) and lastSwingLowBar > lastSwingHighBar and strategy.position_size == 0
+bearSetupTrigger = bearBreak and not na(lastSwingLowBar) and not na(lastSwingHighBar) and lastSwingHighBar > lastSwingLowBar and strategy.position_size == 0
+
+var int activeSetupDir = 0
+var float setupOrigin = na
+var float setupBroken = na
+var float setupRange = na
+var float setupStop = na
+var int setupStartBar = na
+
+if bullSetupTrigger
+    activeSetupDir := 1
+    setupOrigin := lastSwingLow
+    setupBroken := lastSwingHigh
+    setupRange := setupBroken - setupOrigin
+    setupStop := setupOrigin - atr * slAtrBuffer
+    setupStartBar := bar_index
+
+if bearSetupTrigger
+    activeSetupDir := -1
+    setupOrigin := lastSwingHigh
+    setupBroken := lastSwingLow
+    setupRange := setupOrigin - setupBroken
+    setupStop := setupOrigin + atr * slAtrBuffer
+    setupStartBar := bar_index
+
+setupAge = activeSetupDir == 0 or na(setupStartBar) ? 0 : bar_index - setupStartBar
+setupExpired = activeSetupDir != 0 and setupAge > setupExpiryBars
+setupInvalid = activeSetupDir == 1 ? low <= nz(setupStop, low - 1) : activeSetupDir == -1 ? high >= nz(setupStop, high + 1) : false
+
+if setupExpired or setupInvalid
+    activeSetupDir := 0
+    setupOrigin := na
+    setupBroken := na
+    setupRange := na
+    setupStop := na
+    setupStartBar := na
+
+longFib382 = activeSetupDir == 1 and not na(setupRange) ? setupOrigin + setupRange * fibShallowLow : na
+longFib50 = activeSetupDir == 1 and not na(setupRange) ? setupOrigin + setupRange * fibShallowHigh : na
+longFib618 = activeSetupDir == 1 and not na(setupRange) ? setupOrigin + setupRange * fibMid : na
+longFib786 = activeSetupDir == 1 and not na(setupRange) ? setupOrigin + setupRange * fibDeep : na
+
+shortFib382 = activeSetupDir == -1 and not na(setupRange) ? setupOrigin - setupRange * fibShallowLow : na
+shortFib50 = activeSetupDir == -1 and not na(setupRange) ? setupOrigin - setupRange * fibShallowHigh : na
+shortFib618 = activeSetupDir == -1 and not na(setupRange) ? setupOrigin - setupRange * fibMid : na
+shortFib786 = activeSetupDir == -1 and not na(setupRange) ? setupOrigin - setupRange * fibDeep : na
+
+longShallow = activeSetupDir == 1 and not na(longFib382) and low <= longFib50 + buffer and low >= longFib382 - buffer
+longMid = activeSetupDir == 1 and not na(longFib618) and low <= longFib618 + buffer and low >= longFib618 - buffer
+longDeep = activeSetupDir == 1 and not na(longFib786) and low <= longFib786 + buffer and low >= longFib786 - buffer
+shortShallow = activeSetupDir == -1 and not na(shortFib382) and high >= shortFib50 - buffer and high <= shortFib382 + buffer
+shortMid = activeSetupDir == -1 and not na(shortFib618) and high >= shortFib618 - buffer and high <= shortFib618 + buffer
+shortDeep = activeSetupDir == -1 and not na(shortFib786) and high >= shortFib786 - buffer and high <= shortFib786 + buffer
+
+longDepthClass = longDeep ? 3 : longMid ? 2 : longShallow ? 1 : 0
+shortDepthClass = shortDeep ? 3 : shortMid ? 2 : shortShallow ? 1 : 0
+depthClass = activeSetupDir == 1 ? longDepthClass : activeSetupDir == -1 ? shortDepthClass : 0
+
+bullishEngulfing = close > open and close[1] < open[1] and close >= open[1] and open <= close[1]
+bearishEngulfing = close < open and close[1] > open[1] and close <= open[1] and open >= close[1]
+strongBullishEngulfing = bullishEngulfing and close > high[1]
+strongBearishEngulfing = bearishEngulfing and close < low[1]
+bodyOk = math.abs(close - open) >= atr * minBodyAtr
+
+confirmLong = (confirmMode == "Strong Engulfing" ? strongBullishEngulfing : bullishEngulfing) and bodyOk and (not requireDirectionalClose or close > open)
+confirmShort = (confirmMode == "Strong Engulfing" ? strongBearishEngulfing : bearishEngulfing) and bodyOk and (not requireDirectionalClose or close < open)
+
+longReady = allowLong and sessionOk and trendLongOk and activeSetupDir == 1 and depthClass > 0 and confirmLong and setupAge > 0 and strategy.position_size == 0
+shortReady = allowShort and sessionOk and trendShortOk and activeSetupDir == -1 and depthClass > 0 and confirmShort and setupAge > 0 and strategy.position_size == 0
+
+targetMultiplier = depthClass == 3 ? 1.2 : depthClass == 2 ? 1.618 : depthClass == 1 ? 2.0 : na
+longDepthTarget = activeSetupDir == 1 and not na(setupRange) and not na(targetMultiplier) ? setupOrigin + setupRange * targetMultiplier : na
+shortDepthTarget = activeSetupDir == -1 and not na(setupRange) and not na(targetMultiplier) ? setupOrigin - setupRange * targetMultiplier : na
+
+longEntryPrice = close
+shortEntryPrice = close
+longRiskPerUnit = not na(setupStop) ? longEntryPrice - setupStop : na
+shortRiskPerUnit = not na(setupStop) ? setupStop - shortEntryPrice : na
+riskCash = strategy.equity * (riskPct / 100.0)
+longQtyRisk = not na(longRiskPerUnit) and longRiskPerUnit > syminfo.mintick ? riskCash / longRiskPerUnit : na
+shortQtyRisk = not na(shortRiskPerUnit) and shortRiskPerUnit > syminfo.mintick ? riskCash / shortRiskPerUnit : na
+longQty = positionMode == "Fixed qty" ? fixedQty : longQtyRisk
+shortQty = positionMode == "Fixed qty" ? fixedQty : shortQtyRisk
+
+validLong = longReady and not na(longQty) and longQty > 0 and not na(longRiskPerUnit) and longRiskPerUnit > syminfo.mintick
+validShort = shortReady and not na(shortQty) and shortQty > 0 and not na(shortRiskPerUnit) and shortRiskPerUnit > syminfo.mintick
+
+var float activeLongStop = na
+var float activeLongTarget = na
+var float activeShortStop = na
+var float activeShortTarget = na
+var float activeLongRisk = na
+var float activeShortRisk = na
+var int activeLongDepthClass = 0
+var int activeShortDepthClass = 0
+
+if validLong
+    activeLongStop := setupStop
+    activeLongRisk := longEntryPrice - activeLongStop
+    activeLongTarget := useTargetByRetestDepth and not na(longDepthTarget) ? longDepthTarget : longEntryPrice + activeLongRisk * riskRewardPrimary
+    activeLongDepthClass := depthClass
+    activeShortStop := na
+    activeShortTarget := na
+    activeShortRisk := na
+    activeShortDepthClass := 0
+    strategy.entry("Long", strategy.long, qty=longQty)
+    activeSetupDir := 0
+    setupOrigin := na
+    setupBroken := na
+    setupRange := na
+    setupStop := na
+    setupStartBar := na
+
+if validShort
+    activeShortStop := setupStop
+    activeShortRisk := activeShortStop - shortEntryPrice
+    activeShortTarget := useTargetByRetestDepth and not na(shortDepthTarget) ? shortDepthTarget : shortEntryPrice - activeShortRisk * riskRewardPrimary
+    activeShortDepthClass := depthClass
+    activeLongStop := na
+    activeLongTarget := na
+    activeLongRisk := na
+    activeLongDepthClass := 0
+    strategy.entry("Short", strategy.short, qty=shortQty)
+    activeSetupDir := 0
+    setupOrigin := na
+    setupBroken := na
+    setupRange := na
+    setupStop := na
+    setupStartBar := na
+
+if strategy.position_size > 0 and not na(activeLongStop) and not na(activeLongTarget)
+    if enableBreakeven and not na(activeLongRisk) and close >= strategy.position_avg_price + activeLongRisk
+        activeLongStop := math.max(activeLongStop, strategy.position_avg_price)
+    strategy.exit("Long Exit", "Long", stop=activeLongStop, limit=activeLongTarget)
+
+if strategy.position_size < 0 and not na(activeShortStop) and not na(activeShortTarget)
+    if enableBreakeven and not na(activeShortRisk) and close <= strategy.position_avg_price - activeShortRisk
+        activeShortStop := math.min(activeShortStop, strategy.position_avg_price)
+    strategy.exit("Short Exit", "Short", stop=activeShortStop, limit=activeShortTarget)
+
+justClosedTrade = strategy.position_size == 0 and nz(strategy.position_size[1]) != 0
+
+if justClosedTrade
+    activeLongStop := na
+    activeLongTarget := na
+    activeLongRisk := na
+    activeLongDepthClass := 0
+    activeShortStop := na
+    activeShortTarget := na
+    activeShortRisk := na
+    activeShortDepthClass := 0
+
+plotshape(showSignals and bullSetupTrigger, title="Bull BOS", text="BOS Up", style=shape.labelup, location=location.belowbar, color=color.new(color.teal, 0), textcolor=color.white, size=size.tiny)
+plotshape(showSignals and bearSetupTrigger, title="Bear BOS", text="BOS Dn", style=shape.labeldown, location=location.abovebar, color=color.new(color.orange, 0), textcolor=color.white, size=size.tiny)
+plotshape(showSignals and validLong, title="Long Entry", text="BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+plotshape(showSignals and validShort, title="Short Entry", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+
+plot(showLevels and activeSetupDir == 1 ? longFib382 : na, "Long Fib 0.382", color=color.new(color.green, 65), style=plot.style_linebr)
+plot(showLevels and activeSetupDir == 1 ? longFib50 : na, "Long Fib 0.5", color=color.new(color.green, 45), style=plot.style_linebr)
+plot(showLevels and activeSetupDir == 1 ? longFib618 : na, "Long Fib 0.618", color=color.new(color.green, 25), style=plot.style_linebr)
+plot(showLevels and activeSetupDir == 1 ? longFib786 : na, "Long Fib 0.786", color=color.new(color.green, 5), style=plot.style_linebr)
+plot(showLevels and activeSetupDir == -1 ? shortFib382 : na, "Short Fib 0.382", color=color.new(color.red, 65), style=plot.style_linebr)
+plot(showLevels and activeSetupDir == -1 ? shortFib50 : na, "Short Fib 0.5", color=color.new(color.red, 45), style=plot.style_linebr)
+plot(showLevels and activeSetupDir == -1 ? shortFib618 : na, "Short Fib 0.618", color=color.new(color.red, 25), style=plot.style_linebr)
+plot(showLevels and activeSetupDir == -1 ? shortFib786 : na, "Short Fib 0.786", color=color.new(color.red, 5), style=plot.style_linebr)
+
+plot(showLevels and strategy.position_size > 0 ? strategy.position_avg_price : na, "Long Entry", color=color.new(color.green, 20), style=plot.style_linebr)
+plot(showLevels and strategy.position_size > 0 ? activeLongStop : na, "Long Stop", color=color.new(color.red, 0), style=plot.style_linebr)
+plot(showLevels and strategy.position_size > 0 ? activeLongTarget : na, "Long Target", color=color.new(color.blue, 0), style=plot.style_linebr)
+plot(showLevels and strategy.position_size < 0 ? strategy.position_avg_price : na, "Short Entry", color=color.new(color.green, 20), style=plot.style_linebr)
+plot(showLevels and strategy.position_size < 0 ? activeShortStop : na, "Short Stop", color=color.new(color.red, 0), style=plot.style_linebr)
+plot(showLevels and strategy.position_size < 0 ? activeShortTarget : na, "Short Target", color=color.new(color.blue, 0), style=plot.style_linebr)
+
+plot(showDebugPlots ? lastSwingHigh : na, "Last Swing High", color=color.new(color.fuchsia, 0), style=plot.style_linebr)
+plot(showDebugPlots ? lastSwingLow : na, "Last Swing Low", color=color.new(color.aqua, 0), style=plot.style_linebr)
+plot(showDebugPlots ? depthClass : na, "Setup Depth Class", color=color.new(color.yellow, 0), style=plot.style_histogram)
+
+alertcondition(validLong, "SMC Reversal Long", "Bullish BOS + Fib retest + engulfing confirmation")
+alertcondition(validShort, "SMC Reversal Short", "Bearish BOS + Fib retest + engulfing confirmation")

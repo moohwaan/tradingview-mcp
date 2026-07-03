@@ -1,0 +1,285 @@
+{
+  "run_type": "morning_macro_brief",
+  "asset_focus": "XAUUSD",
+  "language": "th",
+  "as_of": "2026-07-02T23:57:49.297819+00:00",
+  "data_status": "complete",
+  "report_mode": "full",
+  "confidence_level": "high",
+  "freshness": {
+    "news_status": "fresh",
+    "snapshot_status": "fresh",
+    "newest_news_at": "2026-07-02T22:44:00+00:00",
+    "oldest_news_at": "2026-07-02T06:17:41+00:00",
+    "snapshot_time": "2026-07-02T23:57:52.247920+00:00"
+  },
+  "market_snapshot": {
+    "gold_reference": {
+      "instrument": "GC=F",
+      "label": "COMEX gold futures proxy",
+      "price": 4141.6,
+      "change": 73.3,
+      "change_pct": 1.8,
+      "currency": "USD",
+      "market_state": "",
+      "snapshot_time": "2026-07-02T23:57:52.247920+00:00",
+      "source": "Yahoo Finance",
+      "error": null
+    },
+    "drivers": [
+      {
+        "key": "silver",
+        "instrument": "SI=F",
+        "label": "COMEX silver futures proxy",
+        "price": 61.6,
+        "change": 1.515,
+        "change_pct": 2.52,
+        "currency": "USD",
+        "market_state": "",
+        "snapshot_time": "2026-07-02T23:57:52.412125+00:00",
+        "source": "Yahoo Finance"
+      },
+      {
+        "key": "us_dollar_index",
+        "instrument": "DX-Y.NYB",
+        "label": "US Dollar Index proxy",
+        "price": 100.938,
+        "change": -0.452,
+        "change_pct": -0.45,
+        "currency": "USD",
+        "market_state": "",
+        "snapshot_time": "2026-07-02T23:57:52.566693+00:00",
+        "source": "Yahoo Finance"
+      },
+      {
+        "key": "wti_crude",
+        "instrument": "CL=F",
+        "label": "WTI crude futures",
+        "price": 68.47,
+        "change": -0.11,
+        "change_pct": -0.16,
+        "currency": "USD",
+        "market_state": "",
+        "snapshot_time": "2026-07-02T23:57:52.728983+00:00",
+        "source": "Yahoo Finance"
+      },
+      {
+        "key": "us_10y_yield",
+        "instrument": "^TNX",
+        "label": "US 10Y Treasury yield index",
+        "price": 4.485,
+        "change": 0.01,
+        "change_pct": 0.22,
+        "currency": "USD",
+        "market_state": "",
+        "snapshot_time": "2026-07-02T23:57:52.895664+00:00",
+        "source": "Yahoo Finance"
+      },
+      {
+        "key": "vix",
+        "instrument": "^VIX",
+        "label": "CBOE Volatility Index",
+        "price": 16.15,
+        "change": -0.44,
+        "change_pct": -2.65,
+        "currency": "USD",
+        "market_state": "",
+        "snapshot_time": "2026-07-02T23:57:53.538951+00:00",
+        "source": "Yahoo Finance"
+      }
+    ]
+  },
+  "themes": [
+    {
+      "topic": "Federal Reserve and rates",
+      "direction_for_gold": "bearish_for_gold",
+      "importance": 0.99,
+      "market_relevance": "Macro policy pressure on non-yielding assets",
+      "evidence": [
+        "investingLive Americas market news wrap: US dollar slides as non-farm payrolls miss - investingLive",
+        "Why Are Investors Divided Over the Path of Treasury Yields? - CME Group",
+        "2-year Treasury yield eases as light jobs report reduces Fed hike expectations - CNBC"
+      ],
+      "driver_th": "ความกังวลเรื่องดอกเบี้ยสูงและบอนด์ยีลด์",
+      "latest_published_at": "2026-07-02T20:33:30+00:00",
+      "matched_item_count": 3,
+      "summary_th": "ตลาดยังให้น้ำหนักกับทิศทางดอกเบี้ยและบอนด์ยีลด์ของสหรัฐฯ",
+      "narrative_th": "แรงกดดันจากแนวโน้มดอกเบี้ยสูงนานขึ้นมักเป็นปัจจัยลบต่อทองคำ เพราะเพิ่มต้นทุนค่าเสียโอกาสของสินทรัพย์ที่ไม่มีดอกผล",
+      "watchout_th": "จับตาข้อมูลเศรษฐกิจสหรัฐฯ และการเปลี่ยนแปลงของบอนด์ยีลด์"
+    },
+    {
+      "topic": "Geopolitical risk",
+      "direction_for_gold": "bullish_for_gold",
+      "importance": 0.97,
+      "market_relevance": "Safe-haven demand can support gold during geopolitical stress",
+      "evidence": [
+        "Iran warns oil tankers to use approved routes in Strait of Hormuz or face a ‘forceful response’ - AP News",
+        "Warsh Touts Early Wins but May Be Overlooking a Deepening Bond Market Risk - Barron's",
+        "Iran warns oil tankers to use approved routes in Strait of Hormuz or face a 'forceful response' - PBS"
+      ],
+      "driver_th": "ความตึงเครียดทางภูมิรัฐศาสตร์",
+      "latest_published_at": "2026-07-02T22:44:00+00:00",
+      "matched_item_count": 3,
+      "summary_th": "ความเสี่ยงภูมิรัฐศาสตร์ยังหนุนแรงซื้อเชิง safe haven",
+      "narrative_th": "ประเด็นความตึงเครียดทางภูมิรัฐศาสตร์มักช่วยหนุนความต้องการถือทองคำในฐานะสินทรัพย์ปลอดภัย",
+      "watchout_th": "จับตาความคืบหน้าความขัดแย้งและเส้นทางขนส่งพลังงานสำคัญ"
+    },
+    {
+      "topic": "US dollar strength",
+      "direction_for_gold": "bearish_for_gold",
+      "importance": 0.92,
+      "market_relevance": "Dollar strength can cap precious-metals upside",
+      "evidence": [
+        "US Dollar Technical Forecast: USD Breakout Faces Its Biggest Test Yet 7 2 2026 - FOREX.com",
+        "Gold surges as weak US NFP knocks US Dollar - FXStreet"
+      ],
+      "driver_th": "การเคลื่อนไหวของดอลลาร์สหรัฐ",
+      "latest_published_at": "2026-07-02T20:33:30+00:00",
+      "matched_item_count": 3,
+      "summary_th": "การแข็งค่าของดอลลาร์ยังเป็นแรงกดดันต่อทองคำ",
+      "narrative_th": "เมื่อดอลลาร์แข็งค่า ราคาทองคำมักเผชิญแรงกดดันเชิงเปรียบเทียบสำหรับผู้ถือสกุลเงินอื่น",
+      "watchout_th": "จับตาการเคลื่อนไหวของดอลลาร์ หากแข็งค่าต่ออาจจำกัด upside ของทอง"
+    },
+    {
+      "topic": "Energy market disruption",
+      "direction_for_gold": "bullish_for_gold",
+      "importance": 0.79,
+      "market_relevance": "Energy stress can feed inflation and risk aversion at the same time",
+      "evidence": [
+        "Iran warns oil tankers to use approved routes in Strait of Hormuz or face a ‘forceful response’ - AP News"
+      ],
+      "driver_th": "ความผันผวนของตลาดพลังงานและอุปทาน",
+      "latest_published_at": "2026-07-02T22:44:00+00:00",
+      "matched_item_count": 2,
+      "summary_th": "ความเสี่ยงด้านพลังงานอาจเพิ่มแรงกังวลเงินเฟ้อและหนุน safe haven",
+      "narrative_th": "หากพลังงานผันผวนจากความเสี่ยงด้านอุปทาน ตลาดอาจกลับมากังวลเงินเฟ้อควบคู่กับความต้องการป้องกันความเสี่ยง",
+      "watchout_th": "จับตาราคาน้ำมันและความต่อเนื่องของ supply disruption"
+    }
+  ],
+  "consistency_status": "mixed",
+  "consistency_notes": [
+    "Headline flow is mixed, so price confirmation matters more than the narrative.",
+    "US dollar proxy move: -0.45%",
+    "US 10Y yield proxy move: +0.22%"
+  ],
+  "summary_bullets_th": [
+    "Gold proxy ผ่าน GC=F เคลื่อนไหวที่ 4,141.60 ดอลลาร์ (+1.80%)",
+    "ตลาดยังให้น้ำหนักกับทิศทางดอกเบี้ยและบอนด์ยีลด์ของสหรัฐฯ",
+    "ความเสี่ยงภูมิรัฐศาสตร์ยังหนุนแรงซื้อเชิง safe haven",
+    "การแข็งค่าของดอลลาร์ยังเป็นแรงกดดันต่อทองคำ"
+  ],
+  "narrative_th": [
+    "ฝั่งแรงกดดันหลักต่อทองคำยังมาจาก ความกังวลเรื่องดอกเบี้ยสูงและบอนด์ยีลด์ และ การเคลื่อนไหวของดอลลาร์สหรัฐ โดยรวมแล้วตลาดยังระวังผลของดอกเบี้ยและค่าเงินต่อสินทรัพย์ที่ไม่มีดอกผล",
+    "ขณะเดียวกัน แรงหนุนเชิงป้องกันความเสี่ยงยังมาจาก ความตึงเครียดทางภูมิรัฐศาสตร์ และ ความผันผวนของตลาดพลังงานและอุปทาน ซึ่งช่วยพยุงแรงซื้อ safe haven ไว้บางส่วน",
+    "ฝั่ง market snapshot พบว่า gold proxy ล่าสุดเปลี่ยนแปลง +1.80% / ดอลลาร์เคลื่อนไหว -0.45% / ผลตอบแทนพันธบัตร 10 ปีเปลี่ยนแปลง +0.22% / น้ำมัน WTI เปลี่ยนแปลง -0.16% ซึ่งหมายความว่าตลาดยังตอบรับแบบคละกัน จึงยังไม่ควรสรุป bias แรงเกินไป"
+  ],
+  "watchouts_th": [
+    "จับตาข้อมูลเศรษฐกิจสหรัฐฯ และการเปลี่ยนแปลงของบอนด์ยีลด์",
+    "จับตาความคืบหน้าความขัดแย้งและเส้นทางขนส่งพลังงานสำคัญ",
+    "จับตาการเคลื่อนไหวของดอลลาร์ หากแข็งค่าต่ออาจจำกัด upside ของทอง"
+  ],
+  "news_items": [
+    {
+      "title": "Iran warns oil tankers to use approved routes in Strait of Hormuz or face a ‘forceful response’ - AP News",
+      "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxQOEM2Y1VRaV9hZEpMWVFYU05hd2FsQjlnbDI5S2FvVmlJNVVjQi1hbTVVTWthM251SFpNcEFsb1ZRX2NuNmo2S3UyUXF3NlkzcHJXTlFGRlotQzR3bDBHSngwcUNYckFDY3VnWUgtRXI5cW9qd0tvUGFjb19kdTVIRXlyU3RkY05neGtOeWRXWmZPdmF0QlQyOG9FdGcxVkxEOWc?oc=5",
+      "source": "\"oil OR Brent OR WTI OR Hormuz when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 22:44:00 GMT",
+      "published_at": "2026-07-02T22:44:00+00:00",
+      "age_hours": 1.23,
+      "summary": "Iran warns oil tankers to use approved routes in Strait of Hormuz or face a ‘forceful response’  AP News",
+      "tags": [
+        "energy",
+        "geopolitics"
+      ]
+    },
+    {
+      "title": "Warsh Touts Early Wins but May Be Overlooking a Deepening Bond Market Risk - Barron's",
+      "url": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxQOU0yVzFlb0xac041UGhLelZ1T3h3bVRpWGllTmR2MUY5VDE3WkpOMVZZTTNySkhMckpIYkNVUVNpVEVVY051cFR6ZnNNZGxpUmktMS1zV0VNNjUwRlhKZ0s0dWRKaEozQlBEb1NRMnFGak9ldENrMVdaZFl1SWJLd1Q0SE1tTG5P?oc=5",
+      "source": "\"\"Federal Reserve\" OR inflation OR Treasury yield when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 22:09:00 GMT",
+      "published_at": "2026-07-02T22:09:00+00:00",
+      "age_hours": 1.81,
+      "summary": "Warsh Touts Early Wins but May Be Overlooking a Deepening Bond Market Risk  Barron's",
+      "tags": [
+        "geopolitics"
+      ]
+    },
+    {
+      "title": "Iran warns oil tankers to use approved routes in Strait of Hormuz or face a 'forceful response' - PBS",
+      "url": "https://news.google.com/rss/articles/CBMixwFBVV95cUxQTXJabDliNXJtTlloZ0hkd2ZtSjV0UVcwRnJjNXE5RndiT01Yb1kxUGhTX3RXVzB1RExjQVRmNmNldVJrc0pGNGlDN1pEeVQzaWhtLW5iSExLQVdwUGxyVHZnNDFrZkFmUmpwMkNOWkxlU2NUYU50SVFvQTN2OTdSalRYbmtrRjhVclJ0a3RTREFXbVNvaE55LVFkSDMyVEl5d3NpZF9lTVJNTW9FWjVxM3p2elNJOXFIZjMzSkVEbHEtZkY0LUdv0gHMAUFVX3lxTE14MVFoTVJRUjlBNmpNQlhabVYyUTZ6bVVfRDVsbmZGQnZSaDRkOTV1bDBiQk1VWTctdC1Fc0JCOTMzNUVDeXVsMlE0cWNqVFQtZi1nQWNyeHRxZDRUQ00tN29XRVF2dXpGSGs1cDdDbWp6RVpMS0pYdExHVHFJbUhkUWI0LWFRZEFLNUpIblNFUy1hWHpoQlRUcXh4dUx4WXd5eGkwY3I1UkE0Z016UnhpUExyWVA1elhjclRHYzVGWmRGSmpLbEU4eFpiaQ?oc=5",
+      "source": "\"oil OR Brent OR WTI OR Hormuz when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 20:40:35 GMT",
+      "published_at": "2026-07-02T20:40:35+00:00",
+      "age_hours": 3.29,
+      "summary": "Iran warns oil tankers to use approved routes in Strait of Hormuz or face a 'forceful response'  PBS",
+      "tags": [
+        "energy",
+        "geopolitics"
+      ]
+    },
+    {
+      "title": "investingLive Americas market news wrap: US dollar slides as non-farm payrolls miss - investingLive",
+      "url": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxPZkhwNVNnejducmN3NFl2SzFITmhSeWFFMmtKakZEM3EyVHVSU3dhbmVjQl9aTkhId1N0ZDkyQ0k2VHh3SmZyV0x1M3BOT1F3cjhXeTdweDEtaVREQ3lzMzFFX1IxYWJqbjlxRmtfc0V4enpoaGgxbE44cHQ3Yl9MU25GZWg4RUdsM0JVT3JxZEhOcjNYZ1NTZnVoaFh4RDdxSjZlQTNKUWx4eVRHbzkySGhjODB5dlFKZlVqY3A0Yms?oc=5",
+      "source": "\"\"US dollar\" OR DXY when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 20:33:30 GMT",
+      "published_at": "2026-07-02T20:33:30+00:00",
+      "age_hours": 3.41,
+      "summary": "investingLive Americas market news wrap: US dollar slides as non-farm payrolls miss  investingLive",
+      "tags": [
+        "fed",
+        "usd"
+      ]
+    },
+    {
+      "title": "US Dollar Technical Forecast: USD Breakout Faces Its Biggest Test Yet 7 2 2026 - FOREX.com",
+      "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxOeENaX3E0d0MySjJtQ1JlckdieTJWaURWYlpMWERPT1lILW5aT2x3SHd5NWNxMkc5X1p0VnAwRVJYZjV2VS1aSC01aUxZMWpwSW1KazlyWmRYaWd6R3ozeFZ2V0U0d0YwRlBNU2VLQVl0MmhkSUFPb09XdVpKM1NuUWpvbmVqZUtIZnA2d1JzMEpmWVc0ZEZWMjBlLU5OTzAzc2dnWjgwaGFKNGZLcmNyelVMUms2OW5kVERUaEVR?oc=5",
+      "source": "\"\"US dollar\" OR DXY when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 19:39:00 GMT",
+      "published_at": "2026-07-02T19:39:00+00:00",
+      "age_hours": 4.31,
+      "summary": "US Dollar Technical Forecast: USD Breakout Faces Its Biggest Test Yet 7 2 2026  FOREX.com",
+      "tags": [
+        "usd"
+      ]
+    },
+    {
+      "title": "Gold surges as weak US NFP knocks US Dollar - FXStreet",
+      "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxPVG1nczhhdTN2Qm9RWThiNS1RODdmRWt1SWhsX2x6aUh3MmIwMWNNQzVBRVJtNGRmRkdTam9qeGRMb2pFS1BDVUlzNThuSXU3cm1hUjg3VzFUOVViQUI2WTQ3MWhVUGtlTEdZNkwzMW1CeU9SdnN5cE9mSG9la1hXUzVjVkFIbjdzU3RKS3Ruaw?oc=5",
+      "source": "\"\"US dollar\" OR DXY when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 18:58:43 GMT",
+      "published_at": "2026-07-02T18:58:43+00:00",
+      "age_hours": 4.99,
+      "summary": "Gold surges as weak US NFP knocks US Dollar  FXStreet",
+      "tags": [
+        "gold",
+        "usd"
+      ]
+    },
+    {
+      "title": "Why Are Investors Divided Over the Path of Treasury Yields? - CME Group",
+      "url": "https://news.google.com/rss/articles/CBMivAFBVV95cUxQTDk3Q1FKeHNCU2NJSFVZVHlnVXptZXBlbjVQN1NkZzBVUUpIM1VhTEd0UUFKZVE1TjZJeXlEa21MRWhtem5BOFdUZi1yeG8tT1g1bFFyUzFGamQ2ak9Pci1jWFBCYzJDQ0VxS3RZQ2FtMU1acTdJYThycFYwREhqVWszcVRkMjNnZ242cGxtTlU4WlpHVmVhZDJKbWVSam5ZZkUxNWY0dlhkcXNzNjRBODBJVDdtTjVtV2tFTg?oc=5",
+      "source": "\"\"Federal Reserve\" OR inflation OR Treasury yield when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 15:38:25 GMT",
+      "published_at": "2026-07-02T15:38:25+00:00",
+      "age_hours": 8.32,
+      "summary": "Why Are Investors Divided Over the Path of Treasury Yields?  CME Group",
+      "tags": [
+        "fed"
+      ]
+    },
+    {
+      "title": "2-year Treasury yield eases as light jobs report reduces Fed hike expectations - CNBC",
+      "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxOTVZIMjRNbVBERUNlZXJGN0thd3VIZ2pqa0t5dGZxRUlFR0tZTTZiUFpqMVBVTXMyN2xkTnlmdTNFSXBrWTJoZDhHUnZOLTk2SVJteDZHLXRmcHhJeEZBcXY0NkFvR3RndGx6QllwQnVVSWxWQko5ZExROUJidGpGcHd0NUFVMkRzazVfM2p1UGRHdWVHWGdvUGM3TlfSAaIBQVVfeXFMTzhnY3FqTUpFQ25oc093RjJYZFU5c3dDcmExd1FhRTByVEJFajg4dlZ3QnZCOFFScjltN0Q1VkNpbk5rT1NfU1JTLTZhNlpkdDBJNG1vd3ZYcnV0c2twM1FTQ3R6clJNcFF2TDV0aThnNW9ZTmNHS21SbkhLVkxVVFhSdTJNRFBsWktmLVRyaENuOGFvd0d6QlNRemtlclJRMkV3?oc=5",
+      "source": "\"\"Federal Reserve\" OR inflation OR Treasury yield when:1d\" - Google News",
+      "published": "Thu, 02 Jul 2026 06:17:41 GMT",
+      "published_at": "2026-07-02T06:17:41+00:00",
+      "age_hours": 17.67,
+      "summary": "2-year Treasury yield eases as light jobs report reduces Fed hike expectations  CNBC",
+      "tags": [
+        "fed"
+      ]
+    }
+  ],
+  "errors": [],
+  "formatted_brief_th": "3 กรกฎาคม 2569\n📌 หัวข้อประเด็นสำคัญ :\n▪️Gold proxy ผ่าน GC=F เคลื่อนไหวที่ 4,141.60 ดอลลาร์ (+1.80%)\n▪️ตลาดยังให้น้ำหนักกับทิศทางดอกเบี้ยและบอนด์ยีลด์ของสหรัฐฯ\n▪️ความเสี่ยงภูมิรัฐศาสตร์ยังหนุนแรงซื้อเชิง safe haven\n▪️การแข็งค่าของดอลลาร์ยังเป็นแรงกดดันต่อทองคำ\n_____________________________\n🤝 ปัจจัยหลักที่กำลังชี้นำราคาทองคำ\nฝั่งแรงกดดันหลักต่อทองคำยังมาจาก ความกังวลเรื่องดอกเบี้ยสูงและบอนด์ยีลด์ และ การเคลื่อนไหวของดอลลาร์สหรัฐ โดยรวมแล้วตลาดยังระวังผลของดอกเบี้ยและค่าเงินต่อสินทรัพย์ที่ไม่มีดอกผล\nขณะเดียวกัน แรงหนุนเชิงป้องกันความเสี่ยงยังมาจาก ความตึงเครียดทางภูมิรัฐศาสตร์ และ ความผันผวนของตลาดพลังงานและอุปทาน ซึ่งช่วยพยุงแรงซื้อ safe haven ไว้บางส่วน\nฝั่ง market snapshot พบว่า gold proxy ล่าสุดเปลี่ยนแปลง +1.80% / ดอลลาร์เคลื่อนไหว -0.45% / ผลตอบแทนพันธบัตร 10 ปีเปลี่ยนแปลง +0.22% / น้ำมัน WTI เปลี่ยนแปลง -0.16% ซึ่งหมายความว่าตลาดยังตอบรับแบบคละกัน จึงยังไม่ควรสรุป bias แรงเกินไป\n___\n⚠️ สิ่งที่ต้องระวังวันนี้\nจับตาข้อมูลเศรษฐกิจสหรัฐฯ และการเปลี่ยนแปลงของบอนด์ยีลด์\nจับตาความคืบหน้าความขัดแย้งและเส้นทางขนส่งพลังงานสำคัญ\nจับตาการเคลื่อนไหวของดอลลาร์ หากแข็งค่าต่ออาจจำกัด upside ของทอง\n\nas of 06:57 ICT | confidence: high | data_status: complete"
+}

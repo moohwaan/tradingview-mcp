@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520">
+<rect width="100%" height="100%" fill="#f8fafc"/>
+<rect x="18" y="18" width="964" height="484" rx="18" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="70" y="58" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#0f172a">GC=F Gold Futures - 2026-06-12 (Asia/Bangkok)</text>
+<text x="70" y="84" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Hourly closes from Yahoo Finance via tradingview-mcp data path</text>
+<line x1="70" y1="440.00" x2="970" y2="440.00" stroke="#e2e8f0" />
+<text x="60" y="445.00" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">4,078.9</text>
+<line x1="70" y1="358.00" x2="970" y2="358.00" stroke="#e2e8f0" />
+<text x="60" y="363.00" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">4,119.5</text>
+<line x1="70" y1="276.00" x2="970" y2="276.00" stroke="#e2e8f0" />
+<text x="60" y="281.00" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">4,160.1</text>
+<line x1="70" y1="194.00" x2="970" y2="194.00" stroke="#e2e8f0" />
+<text x="60" y="199.00" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">4,200.6</text>
+<line x1="70" y1="112.00" x2="970" y2="112.00" stroke="#e2e8f0" />
+<text x="60" y="117.00" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">4,241.2</text>
+<line x1="70" y1="30.00" x2="970" y2="30.00" stroke="#e2e8f0" />
+<text x="60" y="35.00" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">4,281.8</text>
+<polyline fill="none" stroke="#0f766e" stroke-width="3" points="70.00,249.45 110.91,229.44 151.82,134.87 192.73,126.99 233.64,65.55 274.55,113.24 315.45,136.68 356.36,178.72 397.27,168.01 438.18,153.05 479.09,171.24 520.00,206.00 560.91,184.38 601.82,164.57 642.73,112.03 683.64,108.19 724.55,130.82 765.45,139.11 806.36,170.43 847.27,181.75 888.18,144.97 929.09,129.81 970.00,121.53" />
+<circle cx="70.00" cy="249.45" r="3" fill="#0f766e" />
+<text x="70.00" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">00:00</text>
+<circle cx="110.91" cy="229.44" r="3" fill="#0f766e" />
+<circle cx="151.82" cy="134.87" r="3" fill="#0f766e" />
+<text x="151.82" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">02:00</text>
+<circle cx="192.73" cy="126.99" r="3" fill="#0f766e" />
+<circle cx="233.64" cy="65.55" r="3" fill="#0f766e" />
+<text x="233.64" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">05:00</text>
+<circle cx="274.55" cy="113.24" r="3" fill="#0f766e" />
+<circle cx="315.45" cy="136.68" r="3" fill="#0f766e" />
+<text x="315.45" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">07:00</text>
+<circle cx="356.36" cy="178.72" r="3" fill="#0f766e" />
+<circle cx="397.27" cy="168.01" r="3" fill="#0f766e" />
+<text x="397.27" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">09:00</text>
+<circle cx="438.18" cy="153.05" r="3" fill="#0f766e" />
+<circle cx="479.09" cy="171.24" r="3" fill="#0f766e" />
+<text x="479.09" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">11:00</text>
+<circle cx="520.00" cy="206.00" r="3" fill="#0f766e" />
+<circle cx="560.91" cy="184.38" r="3" fill="#0f766e" />
+<text x="560.91" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">13:00</text>
+<circle cx="601.82" cy="164.57" r="3" fill="#0f766e" />
+<circle cx="642.73" cy="112.03" r="3" fill="#0f766e" />
+<text x="642.73" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">15:00</text>
+<circle cx="683.64" cy="108.19" r="3" fill="#0f766e" />
+<circle cx="724.55" cy="130.82" r="3" fill="#0f766e" />
+<text x="724.55" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">17:00</text>
+<circle cx="765.45" cy="139.11" r="3" fill="#0f766e" />
+<circle cx="806.36" cy="170.43" r="3" fill="#0f766e" />
+<text x="806.36" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">19:00</text>
+<circle cx="847.27" cy="181.75" r="3" fill="#0f766e" />
+<circle cx="888.18" cy="144.97" r="3" fill="#0f766e" />
+<text x="888.18" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">21:00</text>
+<circle cx="929.09" cy="129.81" r="3" fill="#0f766e" />
+<circle cx="970.00" cy="121.53" r="3" fill="#0f766e" />
+<text x="970.00" y="482" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#64748b">23:00</text>
+<line x1="70" y1="440" x2="970" y2="440" stroke="#94a3b8" />
+</svg>
