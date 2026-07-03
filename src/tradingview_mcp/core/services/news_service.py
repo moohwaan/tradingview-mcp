@@ -11,8 +11,17 @@ Sources:
 """
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from pathlib import Path
 from typing import Optional
+from math import ceil
+
+# Allow workspace-local vendor installs for optional dependencies.
+VENDOR_DIR = Path(__file__).resolve().parents[4] / ".vendor"
+if VENDOR_DIR.exists():
+    sys.path.insert(0, str(VENDOR_DIR))
 
 # feedparser is bundled with agent-reach (installed globally)
 try:
@@ -28,12 +37,19 @@ RSS_FEEDS: dict[str, list[dict]] = {
         {"url": "https://www.coindesk.com/arc/outboundfeeds/rss/", "name": "CoinDesk"},
         {"url": "https://cointelegraph.com/rss", "name": "CoinTelegraph"},
     ],
+    "macro": [
+        {"url": "https://news.google.com/rss/search?q=gold+when:1d&hl=en-US&gl=US&ceid=US:en", "name": "Google News Gold"},
+        {"url": "https://news.google.com/rss/search?q=%22Federal+Reserve%22+OR+inflation+OR+Treasury+yield+when:1d&hl=en-US&gl=US&ceid=US:en", "name": "Google News Fed"},
+        {"url": "https://news.google.com/rss/search?q=%22US+dollar%22+OR+DXY+when:1d&hl=en-US&gl=US&ceid=US:en", "name": "Google News Dollar"},
+        {"url": "https://news.google.com/rss/search?q=oil+OR+Brent+OR+WTI+OR+Hormuz+when:1d&hl=en-US&gl=US&ceid=US:en", "name": "Google News Energy"},
+    ],
     "stocks": [
         {"url": "https://feeds.reuters.com/reuters/businessNews", "name": "Reuters Business"},
         {"url": "https://feeds.reuters.com/reuters/companyNews", "name": "Reuters Company"},
     ],
     "all": [
         {"url": "https://feeds.reuters.com/reuters/businessNews", "name": "Reuters Business"},
+        {"url": "https://news.google.com/rss/search?q=markets+when:1d&hl=en-US&gl=US&ceid=US:en", "name": "Google News Markets"},
         {"url": "https://www.coindesk.com/arc/outboundfeeds/rss/", "name": "CoinDesk"},
         {"url": "https://cointelegraph.com/rss", "name": "CoinTelegraph"},
     ],
@@ -69,16 +85,17 @@ def fetch_news(
 
     feeds = RSS_FEEDS.get(category, RSS_FEEDS["stocks"])
     results: list[dict] = []
+    seen_keys: set[str] = set()
+    per_feed_limit = max(1, ceil(limit / max(len(feeds), 1)))
 
     for feed_info in feeds:
-        if len(results) >= limit:
-            break
         try:
             feed = feedparser.parse(feed_info["url"])
             source_name = feed.feed.get("title", feed_info["name"])
+            collected_from_feed = 0
 
             for entry in feed.entries:
-                if len(results) >= limit:
+                if len(results) >= limit or collected_from_feed >= per_feed_limit:
                     break
 
                 title = entry.get("title", "")
@@ -90,13 +107,20 @@ def fetch_news(
                     if symbol.upper() not in combined:
                         continue
 
+                dedupe_key = f"{title}|{entry.get('link', '')}".strip().lower()
+                if dedupe_key in seen_keys:
+                    continue
+                seen_keys.add(dedupe_key)
+
                 results.append({
                     "title": title,
                     "url": entry.get("link", ""),
                     "published": entry.get("published", ""),
+                    "published_at": _entry_published_at(entry),
                     "summary": _clean_html(summary)[:300],
                     "source": source_name,
                 })
+                collected_from_feed += 1
 
         except Exception:
             continue
@@ -132,3 +156,24 @@ def _clean_html(text: str) -> str:
     for entity, char in (("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&nbsp;", " ")):
         text = text.replace(entity, char)
     return text.strip()
+
+
+def _entry_published_at(entry: dict) -> str | None:
+    """Normalize a feed entry published timestamp to ISO-8601 UTC when possible."""
+    parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+    if parsed:
+        try:
+            return datetime(*parsed[:6], tzinfo=timezone.utc).isoformat()
+        except Exception:
+            pass
+
+    published = entry.get("published") or entry.get("updated")
+    if not published:
+        return None
+    try:
+        dt = parsedate_to_datetime(published)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).isoformat()
+    except Exception:
+        return None

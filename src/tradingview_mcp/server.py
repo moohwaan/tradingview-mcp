@@ -43,6 +43,7 @@ from tradingview_mcp.core.services.egx_service import (
 )
 from tradingview_mcp.core.services.sentiment_service import analyze_sentiment
 from tradingview_mcp.core.services.news_service import fetch_news_summary
+from tradingview_mcp.core.services.morning_brief_service import build_morning_macro_brief
 from tradingview_mcp.core.services.yahoo_finance_service import (
     get_price,
     get_market_snapshot,
@@ -514,6 +515,19 @@ def combined_analysis(symbol: str, exchange: str = "NASDAQ", timeframe: str = "1
             ),
         },
     }
+
+
+@mcp.tool()
+def morning_macro_brief(asset: str = "XAUUSD", lang: str = "th", news_limit: int = 12) -> dict:
+    """Morning macro brief for an asset with freshness and consistency guardrails.
+
+    Args:
+        asset: Asset focus, currently optimized for XAUUSD
+        lang: Output language, default "th"
+        news_limit: Approximate number of news items to consider
+    """
+    news_limit = max(6, min(news_limit, 20))
+    return build_morning_macro_brief(asset, lang, news_limit)
 
 
 # ── Backtest tools ─────────────────────────────────────────────────────────────

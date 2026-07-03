@@ -439,6 +439,7 @@ def analyze_coin(
         extract_extended_indicators,
         analyze_timeframe_context,
         compute_stock_score,
+        compute_trade_prefilter,
         compute_trade_setup,
         compute_trade_quality,
     )
@@ -479,7 +480,13 @@ def analyze_coin(
                 trade_data["stock_score"] = score_result["score"]
                 trade_data["grade"] = score_result["grade"]
                 trade_data["trend_state"] = score_result["trend_state"]
-                setup = compute_trade_setup(indicators)
+                prefilter = compute_trade_prefilter(indicators, score_result)
+                if prefilter:
+                    trade_data["trade_prefilter"] = prefilter
+                if prefilter and prefilter["ready_for_trade_plan"]:
+                    setup = compute_trade_setup(indicators)
+                else:
+                    setup = None
                 if setup:
                     trade_data["trade_setup"] = {
                         "setup_types": setup["setup_types"],
@@ -496,6 +503,8 @@ def analyze_coin(
                         trade_data["trade_quality_score"] = quality["trade_quality_score"]
                         trade_data["trade_quality"] = quality["quality"]
                         trade_data["trade_notes"] = quality["notes"]
+                elif prefilter:
+                    trade_data["trade_plan_status"] = "skipped_by_prefilter"
 
         return {
             "symbol": full_symbol,

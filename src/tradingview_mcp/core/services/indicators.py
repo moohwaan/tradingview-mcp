@@ -1203,6 +1203,106 @@ def compute_momentum_score(indicators: Dict) -> Optional[Dict]:
     return result
 
 
+def compute_trade_prefilter(indicators: Dict, score_result: Optional[Dict] = None) -> Optional[Dict]:
+    """Gate symbols before generating a trade plan.
+
+    The goal is simple: only promote symbols with acceptable structure,
+    participation, and liquidity into the trade-planning stage.
+    """
+    score_result = score_result or compute_stock_score(indicators)
+    if not score_result:
+        return None
+
+    close = indicators.get("close")
+    ema200 = indicators.get("EMA200")
+    volume = indicators.get("volume")
+    vol_sma20 = indicators.get("volume.SMA20")
+    adx = indicators.get("ADX")
+    atr = indicators.get("ATR")
+
+    vol_ratio = (volume / vol_sma20) if volume and vol_sma20 and vol_sma20 > 0 else None
+    atr_pct = ((atr / close) * 100) if atr and close and close > 0 else None
+
+    score = score_result["score"]
+    liquidity_ok = score_result.get("liquidity", {}).get("liquidity_ok", True)
+
+    checks = [
+        {
+            "name": "score",
+            "passed": score >= 70,
+            "actual": score,
+            "threshold": ">= 70",
+            "reason": "Composite score is strong enough for trade planning" if score >= 70 else "Composite score is still below planning threshold",
+        },
+        {
+            "name": "trend_structure",
+            "passed": bool(close and ema200 and close > ema200),
+            "actual": round(close, 4) if close else None,
+            "threshold": "price > EMA200",
+            "reason": "Price is above EMA200" if close and ema200 and close > ema200 else "Price is not above EMA200",
+        },
+        {
+            "name": "volume_participation",
+            "passed": bool(vol_ratio is not None and vol_ratio >= 1.0),
+            "actual": round(vol_ratio, 2) if vol_ratio is not None else None,
+            "threshold": "volume / SMA20 >= 1.0",
+            "reason": "Volume confirms current move" if vol_ratio is not None and vol_ratio >= 1.0 else "Volume is below its 20-period average",
+        },
+        {
+            "name": "trend_strength",
+            "passed": bool(adx is not None and adx >= 20),
+            "actual": round(adx, 2) if adx is not None else None,
+            "threshold": "ADX >= 20",
+            "reason": "Trend strength is acceptable" if adx is not None and adx >= 20 else "Trend strength is still weak",
+        },
+        {
+            "name": "volatility",
+            "passed": bool(atr_pct is not None and 1.0 <= atr_pct <= 6.0),
+            "actual": round(atr_pct, 2) if atr_pct is not None else None,
+            "threshold": "1.0 <= ATR% <= 6.0",
+            "reason": "Volatility is tradable" if atr_pct is not None and 1.0 <= atr_pct <= 6.0 else "Volatility is outside the preferred trade-planning range",
+        },
+        {
+            "name": "liquidity",
+            "passed": liquidity_ok,
+            "actual": score_result.get("liquidity", {}),
+            "threshold": "liquidity_ok = true",
+            "reason": "Liquidity is acceptable" if liquidity_ok else "Liquidity filter failed",
+        },
+    ]
+
+    failed_checks = [check["name"] for check in checks if not check["passed"]]
+    passed_count = len(checks) - len(failed_checks)
+
+    if not failed_checks:
+        status = "qualified"
+        ready_for_trade_plan = True
+        summary = "Passed all pre-trade filters"
+    elif (
+        score >= 55
+        and len(failed_checks) <= 3
+        and "liquidity" not in failed_checks
+        and "trend_structure" not in failed_checks
+    ):
+        status = "watchlist"
+        ready_for_trade_plan = False
+        summary = "Promising, but not ready for a full trade plan yet"
+    else:
+        status = "rejected"
+        ready_for_trade_plan = False
+        summary = "Filtered out before trade-plan generation"
+
+    return {
+        "status": status,
+        "ready_for_trade_plan": ready_for_trade_plan,
+        "summary": summary,
+        "passed_checks": passed_count,
+        "total_checks": len(checks),
+        "failed_checks": failed_checks,
+        "checks": checks,
+    }
+
+
 # ---------------------------------------------------------------------------
 # LAYER B — Trade Setup Engine
 # Answers: "How do I enter, target, and control risk?"

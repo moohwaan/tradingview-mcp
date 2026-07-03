@@ -16,6 +16,7 @@ from tradingview_mcp.core.services.indicators import (
     compute_metrics,
     extract_extended_indicators,
     compute_stock_score,
+    compute_trade_prefilter,
     compute_trade_setup,
     compute_trade_quality,
     compute_fibonacci_levels,
@@ -900,7 +901,8 @@ def generate_egx_trade_plan(symbol: str, timeframe: str = "1D") -> dict:
     if not score_result:
         return {"error": f"Could not compute stock score for {full_symbol}"}
 
-    setup = compute_trade_setup(ind)
+    prefilter = compute_trade_prefilter(ind, score_result)
+    setup = compute_trade_setup(ind) if prefilter and prefilter["ready_for_trade_plan"] else None
     quality = compute_trade_quality(ind, score_result["score"], setup) if setup else None
     extended = extract_extended_indicators(ind)
 
@@ -918,6 +920,7 @@ def generate_egx_trade_plan(symbol: str, timeframe: str = "1D") -> dict:
         "signals": score_result["signals"],
         "penalties": score_result["penalties"],
         "liquidity": score_result.get("liquidity", {}),
+        "trade_prefilter": prefilter,
         "rsi": extended["rsi"],
         "macd": extended["macd"],
         "adx": extended["adx"],
@@ -949,7 +952,9 @@ def generate_egx_trade_plan(symbol: str, timeframe: str = "1D") -> dict:
     tq = quality["trade_quality_score"] if quality else 0
     rr2 = setup["risk_reward"]["to_target_2"] if setup else 0
 
-    if ss >= 70 and tq >= 65 and rr2 and rr2 >= 2.0:
+    if prefilter and not prefilter["ready_for_trade_plan"]:
+        recommendation = f"{prefilter['status'].upper()} — {prefilter['summary']}"
+    elif ss >= 70 and tq >= 65 and rr2 and rr2 >= 2.0:
         recommendation = "QUALIFIED — Strong stock with actionable setup"
     elif ss >= 70 and tq >= 50:
         recommendation = "CONDITIONAL — Good stock but setup needs improvement"
